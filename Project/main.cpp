@@ -1,155 +1,29 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <time.h>
+#include "game.h"
+#include "base.h"
+#include "items.h"
+#include "graphics.h"
 using namespace sf;
 
 const int W=600;
 const int H=480;
-int speed = 1;
+int speed = 4;
 int  field[W][H]={0};
-sf::Color feild_color[W][H] = {Color::White};
-
-enum  Direction
-{
-	up,
-	down,
-	left,
-	right,
-};
-class base_Players
-{
-	public:
-		int x,y,dir;
-		Color color;
-		virtual void tick() = 0;
-		virtual Vector3f getColor() = 0;
-		virtual void RandomMove() = 0;
-};
-
-class player: public base_Players
-{	
-	public:
-	player(Color c) 
-	{
-		    x=rand() % W;
-			y=rand() % H;
-			color=c;
-			dir=rand() % 4;
-	}
-	virtual void tick() override
-	{
-		if (dir==up) y+=1;
-		if (dir==left) x-=1;
-		if (dir==right) x+=1;
-		if (dir==down) y-=1;
-
-		if (x>=W) x=0;  if (x<0) x=W-1;
-		if (y>=H) y=0;  if (y<0) y=H-1;
-	}
-
-	virtual void RandomMove() override {};
-	virtual Vector3f getColor() override
-		{return Vector3f(color.r,color.g,color.b);}
-
-};
-
-class enemie: public base_Players
-{
-	public:
-	enemie(Color c) 
-	{
-		    x=rand() % W;
-			y=rand() % H;
-			color=c;
-			dir=rand() % 4;
-	}
-	virtual void tick() override
-		{
-		
-			if (dir==up) y+=1;
-			if (dir==left) x-=1;
-			if (dir==right) x+=1;
-			if (dir==down) y-=1;
-
-			if (x>=W) x=0;  if (x<0) x=W-1;
-			if (y>=H) y=0;  if (y<0) y=H-1;
-		}
-	virtual Vector3f getColor() override
-		{return Vector3f(color.r,color.g,color.b);}
-	
-	virtual void RandomMove() override
-	{
-		// will emplement minimax algorithm for basic AI. 
-		std::cout << "TEST\n";
-		bool openpath[3] = {true};
-		for(int i = 0 ; i < 5 ; ++i)
-		{
-			if( field[x+i][y] > 0)
-				openpath[0] = false;
-			if( field[x-i][y] > 0)
-				openpath[1] = false;
-			if( field[x][y+i] > 0)
-				openpath[3] = false; 
-			if( field[x][y-i] > 0)
-				openpath[3] = false; 
-		}
-		if ( openpath[0] == true)
-			dir = up;
-		else if( openpath[1] == true)
-			dir = left;
-		else if( openpath[2] == true)
-			dir = right;
-		else if( openpath[3] == true)
-			dir = down;
-
-	}
-};
-
-class Item
-{
-	public:
-		int x,y,dir;
-		Color color;
-};
-
-class ClearBall : public Item 
-{
-	public:
-		ClearBall(Color c)
-		{
-			color = c;
-			x = rand() % W;
-			y = rand() % H;
-		}
-
-		void ClearAll()
-		{
-			for (auto i = 0; i < W ; ++i )
-			{
-				for ( auto j = 0; j < H ; ++i )
-				{
-					CircleShape c(3);
-					c.setPosition(i,j); c.setFillColor(Color::Green);	
-					field[i][j] = 1;
-				}
-			}
-		}
-
-};
-
 
 int main()
-{
-	srand(time(0));
+{	
+	// Create Game Window
+	Tron game;
+	// Create Game Sprite
+	// 
+	//  Need to merge with Tron class
+	//
+	graphics base_graphics;
 
-    RenderWindow window(VideoMode(W, H), "The Tron Game!");
-    window.setFramerateLimit(60);
-
-	Texture texture;
-	texture.loadFromFile("background.jpg");
-	Sprite sBackground(texture);
-
-    player p1(Color::Blue);
+	// Create all players and items
+	player p1(Color::Blue);
 	enemie p2(Color::Red);
 	ClearBall I1(Color::Green);
 
@@ -158,20 +32,20 @@ int main()
 	t.create(W, H);
 	t.setSmooth(true);
 	sprite.setTexture(t.getTexture());
-    t.clear();  t.draw(sBackground);
+    t.clear();  t.draw(base_graphics.Background);
 
 	bool Game=1;
 	//Main Menu 
 	
     //EVENT LOOP
-    while (window.isOpen())
+    while (game.is_open())
     {
 		//pull input
         Event e;
-        while (window.pollEvent(e))
+        while (game.window.pollEvent(e))
         {
             if (e.type == Event::Closed)
-                window.close();
+                game.window.close();
 		}
 
 		if (Keyboard::isKeyPressed(Keyboard::Left)) if (p1.dir != right) p1.dir=left;
@@ -188,6 +62,13 @@ int main()
 
 		if (!Game)	continue;
         
+		    field[I1.x+1][I1.y] = -1;
+			field[I1.x-1][I1.y] = -1;
+			field[I1.x-1][I1.y+1] = -1;
+			field[I1.x-1][I1.y-1] = -1;
+			field[I1.x][I1.y+1] = -1;
+			field[I1.x][I1.y-1] = -1;
+			field[I1.x][I1.y] = -1;
 		
 		//update game state
 		for(int i=0;i<speed;i++)
@@ -195,30 +76,27 @@ int main()
 			p1.tick(); p2.tick();
 			//if (field[p1.x][p1.y] >= 1) Game=0;
 			//if (field[p2.x][p2.y] == 1) Game=0;
-			field[p1.x][p1.y] = 1;
-			field[p2.x][p2.y] = 2;
-			field[I1.x][I1.y] = -1;
+			field[p1.x+1][p1.y+1] = 1;
+			field[p2.x+1][p2.y-1] = 2;
 			
-			
-			
-
-
 			if (field[p1.x][p1.y] == -1)
 			{
 				std::cout << "HERE\n";
+				Game = 0;
 			}
 			
 			CircleShape c(3);
+			CircleShape cc(6);
 			c.setPosition(p1.x,p1.y); c.setFillColor(p1.color); t.draw(c);
 			c.setPosition(p2.x,p2.y); c.setFillColor(p2.color);	t.draw(c);
-			c.setPosition(I1.x ,I1.y); c.setFillColor(I1.color);t.draw(c);
+			cc.setPosition(I1.x ,I1.y); cc.setFillColor(I1.color);t.draw(cc);
 			t.display();
 		}
 		
 	   ////// draw  ///////
-		window.clear();
-		window.draw(sprite);
- 		window.display();
+		game.window.clear();
+		game.window.draw(sprite);
+ 		game.window.display();
 		 
 	}
 
